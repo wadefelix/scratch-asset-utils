@@ -76,7 +76,7 @@ def download_media(json_path):
 def scratchJsonStrFromJs(libminjsfile, json_path):
     """从js文件中抽取文件到jsonfile中"""
     json_name = json_path.split("/")[-1]
-    pat = f'src\/lib\/libraries\/{json_name}.*module.exports = JSON.parse\(([^\n]*)\);'
+    pat = f'src\/lib\/libraries\/{json_name}.*?module.exports = JSON.parse\(([^\n]*)\);'
     with open(libminjsfile, 'r', encoding='utf8') as rf, open(json_path, 'w', encoding='utf8') as wf:
         mo = re.search(pat, rf.read(), re.DOTALL)
         jsonobj = json.loads(eval(mo.group(1)))
