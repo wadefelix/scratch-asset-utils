@@ -1,15 +1,17 @@
 import json
 import os
 import requests
+import re
 
 pretend = False
 downloaded = set()
 cdn = 'http://cdn.assets.scratch.mit.edu'
 # 这里替换成你的代理服务器
 proxies = {
-    'http': 'socks5h://127.0.0.1:10808',
-    'https': 'socks5h://127.0.0.1:10808'
+    'https': 'socks5h://184.170.248.5:4145',
+    'http': 'socks5h://184.170.248.5:4145',
 }
+#proxies = None
 
 def download_file(url, path):
     if os.path.exists(path):
@@ -19,7 +21,15 @@ def download_file(url, path):
     if not os.path.exists(floder):
         os.makedirs(floder)
     print(url)
-    res = requests.get(url, proxies=proxies)
+    try:
+        res = requests.get(url, proxies=proxies, verify=False)
+    except requests.exceptions.ConnectionError as e:
+      try:
+        res = requests.get(url, proxies=proxies, verify=False)
+      except requests.exceptions.ConnectionError as e:
+        print(e)
+        return None
+        
     if path in downloaded:
         return None
     if res.status_code == 200:
@@ -61,14 +71,27 @@ def download_media(json_path):
                     download_file(media_url % md5, download_path + md5)
                 print(m['name'])
             else:
-                res = download_file(media_url % m['md5ext'], download_path + m['md5ext'])
+                res = download_file(media_url % m['md5'], download_path + m['md5'])
 
+def scratchJsonStrFromJs(libminjsfile, json_path):
+    """从js文件中抽取文件到jsonfile中"""
+    json_name = json_path.split("/")[-1]
+    pat = f'src\/lib\/libraries\/{json_name}.*module.exports = JSON.parse\(([^\n]*)\);'
+    with open(libminjsfile, 'r', encoding='utf8') as rf, open(json_path, 'w', encoding='utf8') as wf:
+        mo = re.search(pat, rf.read(), re.DOTALL)
+        jsonobj = json.loads(eval(mo.group(1)))
+        json.dump(jsonobj, wf)
 
+libminjsfile = 'scratch3/lib.min.js'
 # 下载背景
+scratchJsonStrFromJs(libminjsfile,"scratch3/json_index/backdrops.json")
 download_media("scratch3/json_index/backdrops.json")
 # 下载造型
+scratchJsonStrFromJs(libminjsfile,"scratch3/json_index/costumes.json")
 download_media("scratch3/json_index/costumes.json")
 # 下载声音
+scratchJsonStrFromJs(libminjsfile,"scratch3/json_index/sounds.json")
 download_media("scratch3/json_index/sounds.json")
 # 下载角色
+scratchJsonStrFromJs(libminjsfile,"scratch3/json_index/sprites.json")
 download_media("scratch3/json_index/sprites.json")
